@@ -42,21 +42,39 @@ jobs:
     - name: Compile WXS → WIXOBJ
       shell: powershell
       run: |
-        # （可選）先列目錄確認檔案位置
-        dir .\WindowTabs\WtSetup
+        # 1. 在 repo 根目錄遞迴搜尋 Product.wxs
+        $wxsFile = Get-ChildItem -Path . -Filter 'Product.wxs' -Recurse -ErrorAction SilentlyContinue |
+                  Select-Object -First 1
 
-        # 呼叫 candle.exe 時用正確路徑
+        if (-not $wxsFile) {
+          Write-Error 'Error: 找不到任何 Product.wxs，請確認檔名與路徑是否正確！'
+          exit 1
+        }
+
+        Write-Host "✔ Found Product.wxs at: $($wxsFile.FullName)"
+
+        # 2. 呼叫 candle.exe 進行編譯
         & 'C:\Program Files (x86)\WiX Toolset v3.14\bin\candle.exe' `
-          '.\WindowTabs\WtSetup\Product.wxs' `
+          $wxsFile.FullName `
           -ext WixUIExtension
 
     - name: Link WIXOBJ → MSI
       shell: powershell
       run: |
+        # 1. 在 repo 根目錄遞迴搜尋 Product.wixobj
+        $wxsFile = Get-ChildItem -Path . -Filter 'Product.wixobj' -Recurse -ErrorAction SilentlyContinue |
+                  Select-Object -First 1
+
+        if (-not $wxsFile) {
+          Write-Error 'Error: 找不到任何 Product.wixobj，請確認檔名與路徑是否正確！'
+          exit 1
+        }
+
+        Write-Host "✔ Found Product.wixobj at: $($wixobjFile.FullName)"
         & 'C:\Program Files (x86)\WiX Toolset v3.14\bin\light.exe' `
           -ext WixUIExtension `
           -o '.\Installer\WindowTabs.msi' `
-          '.\WtSetup\Product.wixobj'
+          $wxsFile.FullName
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4.6.2
