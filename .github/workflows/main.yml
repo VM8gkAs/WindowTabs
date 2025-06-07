@@ -63,10 +63,14 @@ jobs:
       run: |
         $src = Join-Path $Env:GITHUB_WORKSPACE 'WtProgram\Resources'
         $dst = Join-Path $Env:GITHUB_WORKSPACE 'WtSetup'
-        Copy-Item "$src\Bemo.ico" -Destination $dst -Force
-        Copy-Item "$src\Banner.bmp" -Destination $dst -Force
+        Copy-Item (Join-Path $src 'Bemo.ico') -Destination $dst -Force
+        Copy-Item (Join-Path $src 'Banner.bmp') -Destination $dst -Force
+
         Write-Host "✔ 已複製資源："
-        Get-ChildItem -Path $dst -Filter *.ico,*.bmp | ForEach-Object { Write-Host "  - $_.Name" }
+        Get-ChildItem -Path $dst -Include '*.ico','*.bmp' | ForEach-Object {
+          # 用雙引號時，內部先用 $() 將變數展開，外部不用再雙引號包裹
+          Write-Host ("  - " + $_.Name)
+        }
 
 
     - name: Link WIXOBJ → MSI (auto-find)
