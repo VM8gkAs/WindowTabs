@@ -14,9 +14,14 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4.2.2
 
-    - name: Install WiX Toolset via Chocolatey
+    - name: Ensure WiX Toolset is installed
+      shell: powershell
       run: |
-        choco install wixtoolset --version 3.14.1 -y
+        if (!(choco list --local-only | Select-String wixtoolset)) {
+          choco install wixtoolset -y
+        } else {
+          choco upgrade wixtoolset -y
+        }
 
     - name: Setup MSBuild path
       shell: powershell
