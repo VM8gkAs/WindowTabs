@@ -57,17 +57,43 @@ jobs:
           -ext WixUIExtension `
           (Join-Path $Env:GITHUB_WORKSPACE 'WtSetup\WtSetup.wxs')
 
-    - name: Link WIXOBJ → MSI
+
+    - name: Debug .wixobj files in workspace
       shell: pwsh
       run: |
-        $path = Join-Path $Env:GITHUB_WORKSPACE 'WtSetup\WtSetup.wixobj'
-        if (-not (Test-Path $path)) { Write-Error '❌ 找不到 Product.wixobj'; exit 1 }
+        Write-Host "GITHUB_WORKSPACE = $Env:GITHUB_WORKSPACE"
+        Get-ChildItem -Path $Env:GITHUB_WORKSPACE -Recurse -Filter *.wixobj |
+          ForEach-Object { Write-Host "  - " + $_.FullName }
 
-        Write-Host "✔ $path"
+
+    - name: Link WIXOBJ → MSI (auto-find)
+      shell: powershell
+      run: |
+        # 1. 在 workspace 中遞迴列出所有 .wixobj，看看有哪些文件
+        Write-Host "🔍 搜尋 .wixobj 文件："
+        Get-ChildItem -Path $Env:GITHUB_WORKSPACE -Recurse -Filter *.wixobj |
+          ForEach-Object { Write-Host "  - " + $_.FullName }
+
+        # 2. 取第一個找到的 .wixobj
+        $wixObj = Get-ChildItem -Path $Env:GITHUB_WORKSPACE -Recurse -Filter *.wixobj |
+                  Select-Object -First 1
+
+        if (-not $wixObj) {
+          Write-Error "❌ 找不到任何 .wixobj，請確認 candle.exe 是否成功執行！"
+          exit 1
+        }
+
+        Write-Host "✔ 使用 .wixobj： $($wixObj.FullName)"
+
+        # 3. 調用 light.exe 生成 MSI
+        $outMsi = Join-Path $Env:GITHUB_WORKSPACE 'Installer\WindowTabs.msi'
         & 'C:\Program Files (x86)\WiX Toolset v3.14\bin\light.exe' `
           -ext WixUIExtension `
-          -o '.\Installer\WindowTabs.msi' `
-          $path
+          -o $outMsi `
+          $wixObj.FullName
+
+        Write-Host "✔ 已生成 MSI： $outMsi"
+
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4.6.2
