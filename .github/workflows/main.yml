@@ -12,7 +12,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4.2.2
 
     - name: Install WiX Toolset via Chocolatey
       run: |
@@ -42,7 +42,7 @@ jobs:
           -ext WixUIExtension -o Installer/WindowTabs.msi WtSetup/Product.wixobj
 
     - name: Upload Artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@4.6.2
       with:
         name: WindowTabs-Release
         path: |
