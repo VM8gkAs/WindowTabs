@@ -48,15 +48,14 @@ jobs:
           /p:Configuration=Release /t:Build
 
         # 2. 計算出 WtProgram 的輸出目錄
-        $programDir = Join-Path $Env:GITHUB_WORKSPACE 'WtProgram\bin\Release'
+        $programDir = Join-Path $Env:GITHUB_WORKSPACE 'WtProgram\bin\Release\'
         Write-Host "✔ WtProgram 輸出目錄： $programDir"
 
         # 3. 編譯 WXS 並定義 TargetDir 變數
-        $wxsPath = Join-Path $Env:GITHUB_WORKSPACE 'WtSetup\WtSetup.wxs'
         & 'C:\Program Files (x86)\WiX Toolset v3.14\bin\candle.exe' `
-          -dWtProgram.TargetDir="$programDir\" `
+          "-dWtProgram.TargetDir=$programDir" `
           -ext WixUIExtension `
-          $wxsPath
+          (Join-Path $Env:GITHUB_WORKSPACE 'WtSetup\WtSetup.wxs')
 
     - name: Link WIXOBJ → MSI
       shell: pwsh
