@@ -48,37 +48,36 @@ jobs:
           ForEach-Object { Write-Host "  - " + $_.FullName }
 
 
+    - name: Debug .wixobj files in workspace
+      shell: pwsh
+      run: |
+        Write-Host "GITHUB_WORKSPACE = $Env:GITHUB_WORKSPACE"
+        Get-ChildItem -Path $Env:GITHUB_WORKSPACE -Recurse -Filter *.wixobj |
+          ForEach-Object { Write-Host "  - " + $_.FullName }
+
+
     - name: Compile WXS → WIXOBJ
       shell: pwsh
       run: |
-        # 遞迴搜尋 repo 中第一個 Product.wxs
-        $wxsFile = Get-ChildItem -Path $Env:GITHUB_WORKSPACE -Filter Product.wxs -Recurse |
-                   Select-Object -First 1
-
-        # 找不到就讓工作流失敗
+        $path = Join-Path $Env:GITHUB_WORKSPACE 'WtSetup\WtSetup.wxs'
         if (-not $wxsFile) { Write-Error '❌ 找不到 Product.wxs'; exit 1 }
 
-        Write-Host "✔ Found Product.wxs at: $($wxsFile.FullName)"
-
-        # 呼叫 candle.exe 進行編譯
+        Write-Host "✔ $path"
         & 'C:\Program Files (x86)\WiX Toolset v3.14\bin\candle.exe' `
-          $wxsFile.FullName `
+          $path `
           -ext WixUIExtension
 
     - name: Link WIXOBJ → MSI
       shell: pwsh
       run: |
-        # 1. 在 repo 根目錄遞迴搜尋 Product.wixobj
-        $wxsFile = Get-ChildItem -Path $Env:GITHUB_WORKSPACE -Filter Product.wixobj -Recurse |
-                   Select-Object -First 1
-
+        $path = Join-Path $Env:GITHUB_WORKSPACE 'WtSetup\WtSetup.wixobj'
         if (-not $wxsFile) { Write-Error '❌ 找不到 Product.wixobj'; exit 1 }
 
-        Write-Host "✔ Found Product.wixobj at: $($wixobjFile.FullName)"
+        Write-Host "✔ $path"
         & 'C:\Program Files (x86)\WiX Toolset v3.14\bin\light.exe' `
           -ext WixUIExtension `
           -o '.\Installer\WindowTabs.msi' `
-          $wxsFile.FullName
+          $path
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4.6.2
