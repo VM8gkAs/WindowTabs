@@ -24,12 +24,13 @@ jobs:
         }
 
     - name: Setup MSBuild path
-      shell: powershell
       id: find-msbuild
+      shell: powershell
       run: |
         $vs = & "${Env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
           -latest -prerelease -requires Microsoft.Component.MSBuild -property installationPath
         $msbuild = Join-Path $vs 'MSBuild\Current\Bin\MSBuild.exe'
+        Write-Host "MSBuild path detected: $msbuild"
         echo "msbuild=$msbuild" >> "$GITHUB_OUTPUT"
 
     - name: Build Solution (Release)
