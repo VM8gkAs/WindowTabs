@@ -58,16 +58,19 @@ jobs:
           (Join-Path $Env:GITHUB_WORKSPACE 'WtSetup\WtSetup.wxs')
 
 
-    - name: Debug .wixobj files in workspace
-      shell: pwsh
+    - name: Copy WiX resources into WtSetup
+      shell: powershell
       run: |
-        Write-Host "GITHUB_WORKSPACE = $Env:GITHUB_WORKSPACE"
-        Get-ChildItem -Path $Env:GITHUB_WORKSPACE -Recurse -Filter *.wixobj |
-          ForEach-Object { Write-Host "  - " + $_.FullName }
+        $src = Join-Path $Env:GITHUB_WORKSPACE 'WtProgram\Resources'
+        $dst = Join-Path $Env:GITHUB_WORKSPACE 'WtSetup'
+        Copy-Item "$src\Bemo.ico" -Destination $dst -Force
+        Copy-Item "$src\Banner.bmp" -Destination $dst -Force
+        Write-Host "✔ 已複製資源："
+        Get-ChildItem -Path $dst -Filter *.ico,*.bmp | ForEach-Object { Write-Host "  - $_.Name" }
 
 
     - name: Link WIXOBJ → MSI (auto-find)
-      shell: powershell
+      shell: pwsh
       run: |
         # 1. 在 workspace 中遞迴列出所有 .wixobj，看看有哪些文件
         Write-Host "🔍 搜尋 .wixobj 文件："
