@@ -31,11 +31,12 @@ jobs:
           -latest -prerelease -requires Microsoft.Component.MSBuild -property installationPath
         $msbuild = Join-Path $vs 'MSBuild\Current\Bin\MSBuild.exe'
         Write-Host "MSBuild path detected: $msbuild"
-        echo "msbuild=$msbuild" >> "$GITHUB_OUTPUT"
+        "msbuild=$msbuild" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf8 -Append
 
     - name: Build Solution (Release)
       shell: powershell
       run: |
+        Write-Host "Using MSBuild from: $(${{ steps.find-msbuild.outputs.msbuild }})"
         & "${{ steps.find-msbuild.outputs.msbuild }}" WindowTabs.sln /p:Configuration=Release /m
 
     - name: Compile WXS → WIXOBJ
