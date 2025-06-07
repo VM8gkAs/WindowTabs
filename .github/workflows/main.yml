@@ -30,18 +30,20 @@ jobs:
         $vs = & "${Env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
           -latest -prerelease -requires Microsoft.Component.MSBuild -property installationPath
         $msbuild = Join-Path $vs 'MSBuild\Current\Bin\MSBuild.exe'
-        Write-Output "##[set-output name=msbuild]$msbuild"
+        echo "msbuild=$msbuild" >> "$GITHUB_OUTPUT"
 
     - name: Build Solution (Release)
       run: |
         & '${{ steps.find-msbuild.outputs.msbuild }}' WindowTabs.sln /p:Configuration=Release /m
 
     - name: Compile WXS → WIXOBJ
+      shell: powershell
       run: |
         & 'C:\Program Files (x86)\WiX Toolset v3.14\bin\candle.exe' `
           WtSetup\Product.wxs -ext WixUIExtension
 
     - name: Link WIXOBJ → MSI
+      shell: powershell
       run: |
         & 'C:\Program Files (x86)\WiX Toolset v3.14\bin\light.exe' `
           -ext WixUIExtension -o Installer/WindowTabs.msi WtSetup/Product.wixobj
