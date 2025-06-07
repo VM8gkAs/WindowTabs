@@ -42,7 +42,13 @@ jobs:
     - name: Compile WXS → WIXOBJ
       shell: powershell
       run: |
-        & 'C:\Program Files (x86)\WiX Toolset v3.14\bin\candle.exe' '.\WtSetup\Product.wxs' -ext WixUIExtension
+        # （可選）先列目錄確認檔案位置
+        dir .\WindowTabs\WtSetup
+
+        # 呼叫 candle.exe 時用正確路徑
+        & 'C:\Program Files (x86)\WiX Toolset v3.14\bin\candle.exe' `
+          '.\WindowTabs\WtSetup\Product.wxs' `
+          -ext WixUIExtension
 
     - name: Link WIXOBJ → MSI
       shell: powershell
