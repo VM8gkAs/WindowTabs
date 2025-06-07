@@ -33,8 +33,9 @@ jobs:
         echo "msbuild=$msbuild" >> "$GITHUB_OUTPUT"
 
     - name: Build Solution (Release)
+      shell: powershell
       run: |
-        & '${{ steps.find-msbuild.outputs.msbuild }}' WindowTabs.sln /p:Configuration=Release /m
+        & "${{ steps.find-msbuild.outputs.msbuild }}" WindowTabs.sln /p:Configuration=Release /m
 
     - name: Compile WXS → WIXOBJ
       shell: powershell
