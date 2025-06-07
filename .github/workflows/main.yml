@@ -23,6 +23,9 @@ jobs:
           choco upgrade wixtoolset -y
         }
 
+    - name: Install .NET Framework 4.0 Developer Pack
+      run: choco install netfx-4.0.3-devpack -y
+
     - name: Setup MSBuild path
       shell: powershell
       id: find-msbuild
