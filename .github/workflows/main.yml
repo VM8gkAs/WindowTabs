@@ -67,10 +67,7 @@ jobs:
         Copy-Item (Join-Path $src 'Banner.bmp') -Destination $dst -Force
 
         Write-Host "✔ 已複製資源："
-        Get-ChildItem -Path $dst -Include '*.ico','*.bmp' | ForEach-Object {
-          # 用雙引號時，內部先用 $() 將變數展開，外部不用再雙引號包裹
-          Write-Host ("  - " + $_.Name)
-        }
+        Get-ChildItem -Path $dst -Include '*.ico','*.bmp' | ForEach-Object { Write-Host ("  - " + $_.Name) }
 
 
     - name: Link WIXOBJ → MSI (auto-find)
