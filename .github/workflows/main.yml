@@ -40,35 +40,30 @@ jobs:
         & "${{ steps.find-msbuild.outputs.msbuild }}" WindowTabs.sln /p:Configuration=Release /m
 
     - name: Compile WXS → WIXOBJ
-      shell: powershell
+      shell: pwsh
       run: |
-        # 1. 在 repo 根目錄遞迴搜尋 Product.wxs
-        $wxsFile = Get-ChildItem -Path . -Filter 'Product.wxs' -Recurse -ErrorAction SilentlyContinue |
-                  Select-Object -First 1
+        # 遞迴搜尋 repo 中第一個 Product.wxs
+        $wxsFile = Get-ChildItem -Path $Env:GITHUB_WORKSPACE -Filter Product.wxs -Recurse |
+                   Select-Object -First 1
 
-        if (-not $wxsFile) {
-          Write-Error 'Error: 找不到任何 Product.wxs，請確認檔名與路徑是否正確！'
-          exit 1
-        }
+        # 找不到就讓工作流失敗
+        if (-not $wxsFile) { Write-Error '❌ 找不到 Product.wxs'; exit 1 }
 
         Write-Host "✔ Found Product.wxs at: $($wxsFile.FullName)"
 
-        # 2. 呼叫 candle.exe 進行編譯
+        # 呼叫 candle.exe 進行編譯
         & 'C:\Program Files (x86)\WiX Toolset v3.14\bin\candle.exe' `
           $wxsFile.FullName `
           -ext WixUIExtension
 
     - name: Link WIXOBJ → MSI
-      shell: powershell
+      shell: pwsh
       run: |
         # 1. 在 repo 根目錄遞迴搜尋 Product.wixobj
-        $wxsFile = Get-ChildItem -Path . -Filter 'Product.wixobj' -Recurse -ErrorAction SilentlyContinue |
-                  Select-Object -First 1
+        $wxsFile = Get-ChildItem -Path $Env:GITHUB_WORKSPACE -Filter Product.wixobj -Recurse |
+                   Select-Object -First 1
 
-        if (-not $wxsFile) {
-          Write-Error 'Error: 找不到任何 Product.wixobj，請確認檔名與路徑是否正確！'
-          exit 1
-        }
+        if (-not $wxsFile) { Write-Error '❌ 找不到 Product.wixobj'; exit 1 }
 
         Write-Host "✔ Found Product.wixobj at: $($wixobjFile.FullName)"
         & 'C:\Program Files (x86)\WiX Toolset v3.14\bin\light.exe' `
