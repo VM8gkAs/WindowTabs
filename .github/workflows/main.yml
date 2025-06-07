@@ -36,7 +36,7 @@ jobs:
     - name: Build Solution (Release)
       shell: powershell
       run: |
-        Write-Host "Using MSBuild from: $(${{ steps.find-msbuild.outputs.msbuild }})"
+        Write-Host "Using MSBuild from: ${{ steps.find-msbuild.outputs.msbuild }}"
         & "${{ steps.find-msbuild.outputs.msbuild }}" WindowTabs.sln /p:Configuration=Release /m
 
     - name: Compile WXS → WIXOBJ
