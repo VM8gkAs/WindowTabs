@@ -43,13 +43,20 @@ jobs:
     - name: Compile WXS → WIXOBJ
       shell: pwsh
       run: |
-        $path = Join-Path $Env:GITHUB_WORKSPACE 'WtSetup\WtSetup.wxs'
-        if (-not (Test-Path $path)) { Write-Error '❌ 找不到 Product.wxs'; exit 1 }
+        # 1. 先構建 WtProgram，讓 TargetDir 裡有文件
+        & "${{ steps.find-msbuild.outputs.msbuild }}" WtProgram\WtProgram.fsproj `
+          /p:Configuration=Release /t:Build
 
-        Write-Host "✔ $path"
+        # 2. 計算出 WtProgram 的輸出目錄
+        $programDir = Join-Path $Env:GITHUB_WORKSPACE 'WtProgram\bin\Release'
+        Write-Host "✔ WtProgram 輸出目錄： $programDir"
+
+        # 3. 編譯 WXS 並定義 TargetDir 變數
+        $wxsPath = Join-Path $Env:GITHUB_WORKSPACE 'WtSetup\WtSetup.wxs'
         & 'C:\Program Files (x86)\WiX Toolset v3.14\bin\candle.exe' `
-          $path `
-          -ext WixUIExtension
+          -dWtProgram.TargetDir="$programDir\" `
+          -ext WixUIExtension `
+          $wxsPath
 
     - name: Link WIXOBJ → MSI
       shell: pwsh
