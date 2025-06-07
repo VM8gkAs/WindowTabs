@@ -1,0 +1,50 @@
+name: Build WindowTabs
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Install WiX Toolset via Chocolatey
+      run: |
+        choco install wixtoolset --version 3.14.1 -y
+
+    - name: Setup MSBuild path
+      shell: powershell
+      id: find-msbuild
+      run: |
+        $vs = & "${Env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
+          -latest -prerelease -requires Microsoft.Component.MSBuild -property installationPath
+        $msbuild = Join-Path $vs 'MSBuild\Current\Bin\MSBuild.exe'
+        Write-Output "##[set-output name=msbuild]$msbuild"
+
+    - name: Build Solution (Release)
+      run: |
+        & '${{ steps.find-msbuild.outputs.msbuild }}' WindowTabs.sln /p:Configuration=Release /m
+
+    - name: Compile WXS → WIXOBJ
+      run: |
+        & 'C:\Program Files (x86)\WiX Toolset v3.14\bin\candle.exe' `
+          WtSetup\Product.wxs -ext WixUIExtension
+
+    - name: Link WIXOBJ → MSI
+      run: |
+        & 'C:\Program Files (x86)\WiX Toolset v3.14\bin\light.exe' `
+          -ext WixUIExtension -o Installer/WindowTabs.msi WtSetup/Product.wixobj
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: WindowTabs-Release
+        path: |
+          WtProgram/bin/Release/WindowTabs.exe
+          Installer/WindowTabs.msi
