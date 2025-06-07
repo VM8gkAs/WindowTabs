@@ -15,7 +15,7 @@ jobs:
       uses: actions/checkout@v4.2.2
 
     - name: Ensure WiX Toolset is installed
-      shell: powershell
+      shell: pwsh
       run: |
         if (!(choco list --local-only | Select-String wixtoolset)) {
           choco install wixtoolset -y
@@ -25,7 +25,7 @@ jobs:
 
     - name: Setup MSBuild path
       id: find-msbuild
-      shell: powershell
+      shell: pwsh
       run: |
         $vs = & "${Env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
           -latest -prerelease -requires Microsoft.Component.MSBuild -property installationPath
@@ -34,10 +34,19 @@ jobs:
         "msbuild=$msbuild" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf8 -Append
 
     - name: Build Solution (Release)
-      shell: powershell
+      shell: pwsh
       run: |
         Write-Host "Using MSBuild from: ${{ steps.find-msbuild.outputs.msbuild }}"
         & "${{ steps.find-msbuild.outputs.msbuild }}" WindowTabs.sln /p:Configuration=Release /m
+
+
+    - name: Debug .wxs files in workspace
+      shell: pwsh
+      run: |
+        Write-Host "GITHUB_WORKSPACE = $Env:GITHUB_WORKSPACE"
+        Get-ChildItem -Path $Env:GITHUB_WORKSPACE -Recurse -Filter *.wxs |
+          ForEach-Object { Write-Host "  - " + $_.FullName }
+
 
     - name: Compile WXS → WIXOBJ
       shell: pwsh
