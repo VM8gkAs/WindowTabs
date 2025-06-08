@@ -69,27 +69,25 @@ jobs:
 
 
     - name: Copy WiX resources into WtSetup
-      shell: powershell
+      shell: pwsh            # 用 PowerShell 7，比 Windows PowerShell 5.1 更穩
       run: |
-        $workspace = $Env:GITHUB_WORKSPACE
-        $srcDir   = Join-Path $workspace 'WtProgram\Resources'
-        $dstDir   = Join-Path $workspace 'WtSetup'
+        $ws     = $Env:GITHUB_WORKSPACE
+        $srcDir = Join-Path $ws 'WtProgram\Resources'
+        $dstDir = Join-Path $ws 'WtSetup'
 
-        # 1. 遞迴列出 Resources 下所有檔案，確認路徑
-        Write-Host "🔍 WtProgram\\Resources contents:"
-        Get-ChildItem -Path $srcDir -Recurse | ForEach-Object {
-          Write-Host "  - $($_.FullName)"
-        }
+        # 1. 列出 Resources 內的檔案
+        Write-Host '🔍 內容（WtProgram\Resources）：'
+        Get-ChildItem -Path $srcDir -Recurse |
+          ForEach-Object { Write-Host ('  - ' + $_.FullName) }
 
-        # 2. 複製所有 .bmp 與 .ico 文件到 WtSetup
-        Copy-Item (Join-Path $srcDir '*.bmp') -Destination $dstDir -Force -Recurse
-        Copy-Item (Join-Path $srcDir '*.ico') -Destination $dstDir -Force -Recurse
+        # 2. 複製所有 .bmp 與 .ico
+        Copy-Item -Path "$srcDir\*.bmp" -Destination $dstDir -Recurse -Force
+        Copy-Item -Path "$srcDir\*.ico" -Destination $dstDir -Recurse -Force
 
-        # 3. 列出複製後的 WtSetup 資源，確認無誤
-        Write-Host "✔ WtSetup 裡的資源："
-        Get-ChildItem -Path $dstDir -Filter '*.bmp','*.ico' | ForEach-Object {
-          Write-Host "  - $($_.Name)"
-        }
+        # 3. 再列一次 WtSetup，確認真的複製過來了
+        Write-Host '✔ 已複製到 WtSetup：'
+        Get-ChildItem -Path $dstDir -Include *.bmp,*.ico -Recurse |
+          ForEach-Object { Write-Host ('  - ' + $_.FullName) }
 
 
     - name: Link WIXOBJ → MSI (auto-find)
