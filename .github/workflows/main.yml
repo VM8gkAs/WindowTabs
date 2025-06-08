@@ -56,45 +56,30 @@ jobs:
             -ext WixUIExtension `
             (Join-Path $Env:GITHUB_WORKSPACE 'WtSetup\WtSetup.wxs')
 
-      - name: Debug WtProgram directory
-        shell: powershell
-        run: |
-          Write-Host "Workspace = $Env:GITHUB_WORKSPACE"
-          Write-Host "Listing WtProgram folder contents:"
-          Get-ChildItem -Path (Join-Path $Env:GITHUB_WORKSPACE 'WtProgram') -Recurse | ForEach-Object {
-            Write-Host "  - $($_.FullName)"
-          }
-
-      - name: Copy Banner.bmp into WtSetup
-        shell: pwsh
-        run: |
-          $ws      = $Env:GITHUB_WORKSPACE
-          $srcBmp  = Join-Path $ws 'WtProgram\Resources\Banner.bmp'
-          $dstDir  = Join-Path $ws 'WtSetup'
-
-          if (-not (Test-Path $srcBmp)) {
-            Write-Error "❌ 找不到 $srcBmp，請確認專案內有這張圖"
-            exit 1
-          }
-
-          Copy-Item -Path $srcBmp -Destination $dstDir -Force
-          Write-Host "✔ Banner.bmp 已複製到 $dstDir"
+      # - name: Debug WtProgram directory
+      #   shell: powershell
+      #   run: |
+      #     Write-Host "Workspace = $Env:GITHUB_WORKSPACE"
+      #     Write-Host "Listing WtProgram folder contents:"
+      #     Get-ChildItem -Path (Join-Path $Env:GITHUB_WORKSPACE 'WtProgram') -Recurse | ForEach-Object {
+      #       Write-Host "  - $($_.FullName)"
+      #     }
 
       - name: Link WIXOBJ → MSI
         shell: pwsh
         run: |
           # 進到 WtSetup 資料夾，讓 Banner.bmp 與 .ico 的相對路徑成立
-          $setupDir = Join-Path $Env:GITHUB_WORKSPACE 'WtSetup'
+          $ws       = $Env:GITHUB_WORKSPACE
+          $setupDir = Join-Path $ws 'WtSetup'
           Push-Location $setupDir
 
           # 連結 .wixobj（這裡檔名就是 WtSetup.wixobj，因為 candle 會輸出在當前資料夾）
           & 'C:\Program Files (x86)\WiX Toolset v3.14\bin\light.exe' `
             -ext WixUIExtension `
-            -o (Join-Path $Env:GITHUB_WORKSPACE 'Installer\WindowTabs.msi') `
+            -o (Join-Path $ws 'Installer\WindowTabs.msi') `
             'WtSetup.wixobj'
 
           Pop-Location
-
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4.6.2
