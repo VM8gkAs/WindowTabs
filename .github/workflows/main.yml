@@ -68,26 +68,20 @@ jobs:
         }
 
 
-    - name: Copy WiX resources into WtSetup
-      shell: pwsh            # 用 PowerShell 7，比 Windows PowerShell 5.1 更穩
+    - name: Copy Banner.bmp into WtSetup
+      shell: pwsh
       run: |
-        $ws     = $Env:GITHUB_WORKSPACE
-        $srcDir = Join-Path $ws 'WtProgram\Resources'
-        $dstDir = Join-Path $ws 'WtSetup'
+        $ws      = $Env:GITHUB_WORKSPACE
+        $srcBmp  = Join-Path $ws 'WtProgram\Resources\Banner.bmp'
+        $dstDir  = Join-Path $ws 'WtSetup'
 
-        # 1. 列出 Resources 內的檔案
-        Write-Host '🔍 內容（WtProgram\Resources）：'
-        Get-ChildItem -Path $srcDir -Recurse |
-          ForEach-Object { Write-Host ('  - ' + $_.FullName) }
+        if (-not (Test-Path $srcBmp)) {
+          Write-Error "❌ 找不到 $srcBmp，請確認專案內有這張圖"
+          exit 1
+        }
 
-        # 2. 複製所有 .bmp 與 .ico
-        Copy-Item -Path "$srcDir\*.bmp" -Destination $dstDir -Recurse -Force
-        Copy-Item -Path "$srcDir\*.ico" -Destination $dstDir -Recurse -Force
-
-        # 3. 再列一次 WtSetup，確認真的複製過來了
-        Write-Host '✔ 已複製到 WtSetup：'
-        Get-ChildItem -Path $dstDir -Include *.bmp,*.ico -Recurse |
-          ForEach-Object { Write-Host ('  - ' + $_.FullName) }
+        Copy-Item -Path $srcBmp -Destination $dstDir -Force
+        Write-Host "✔ Banner.bmp 已複製到 $dstDir"
 
 
     - name: Link WIXOBJ → MSI (auto-find)
