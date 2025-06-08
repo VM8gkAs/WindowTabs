@@ -58,6 +58,16 @@ jobs:
           (Join-Path $Env:GITHUB_WORKSPACE 'WtSetup\WtSetup.wxs')
 
 
+    - name: Debug WtProgram directory
+      shell: powershell
+      run: |
+        Write-Host "Workspace = $Env:GITHUB_WORKSPACE"
+        Write-Host "Listing WtProgram folder contents:"
+        Get-ChildItem -Path (Join-Path $Env:GITHUB_WORKSPACE 'WtProgram') -Recurse | ForEach-Object {
+          Write-Host "  - $($_.FullName)"
+        }
+
+
     - name: Copy WiX resources into WtSetup
       shell: pwsh
       run: |
