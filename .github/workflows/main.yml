@@ -69,16 +69,13 @@ jobs:
         shell: pwsh
         run: |
           $ws      = $Env:GITHUB_WORKSPACE
-          $wixObj  = Join-Path $ws 'WtSetup.wixobj'          # 根目錄的檔案
-          $setupBP = Join-Path $ws 'WtSetup'                 # Binder base path
+          $wixObj  = Join-Path $ws 'WtSetup.wixobj'
+          $setupBP = Join-Path $ws 'WtSetup'
 
-          if (-not (Test-Path $wixObj)) {
-            Write-Error "找不到 $wixObj，請確認 candle.exe 是否成功！"; exit 1
-          }
+          if (-not (Test-Path $wixObj)) { Write-Error "找不到 $wixObj"; exit 1 }
 
           & 'C:\Program Files (x86)\WiX Toolset v3.14\bin\light.exe' `
-            -b $setupBP `                     # 告訴 WiX：相對路徑請從 WtSetup 開始判
-            -ext WixUIExtension `
+            -b $setupBP -ext WixUIExtension `
             -o (Join-Path $ws 'Installer\WindowTabs.msi') `
             $wixObj
 
