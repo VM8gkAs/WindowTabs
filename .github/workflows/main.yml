@@ -2,121 +2,104 @@ name: Build WindowTabs
 
 on:
   push:
-    branches: [ master, main ]
+    branches: [master, main]
   pull_request:
-    branches: [ master, main ]
+    branches: [master, main]
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4.2.2
+      - name: Checkout code
+        uses: actions/checkout@v4.2.2
 
-    - name: Ensure WiX Toolset is installed
-      shell: pwsh
-      run: |
-        if (!(choco list --local-only | Select-String wixtoolset)) {
-          choco install wixtoolset -y
-        } else {
-          choco upgrade wixtoolset -y
-        }
+      - name: Ensure WiX Toolset is installed
+        shell: pwsh
+        run: |
+          if (!(choco list --local-only | Select-String wixtoolset)) {
+            choco install wixtoolset -y
+          } else {
+            choco upgrade wixtoolset -y
+          }
 
-    - name: Setup MSBuild path
-      id: find-msbuild
-      shell: pwsh
-      run: |
-        $vs = & "${Env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
-          -latest -prerelease -requires Microsoft.Component.MSBuild -property installationPath
-        $msbuild = Join-Path $vs 'MSBuild\Current\Bin\MSBuild.exe'
-        Write-Host "MSBuild path detected: $msbuild"
-        "msbuild=$msbuild" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf8 -Append
+      - name: Setup MSBuild path
+        id: find-msbuild
+        shell: pwsh
+        run: |
+          $vs = & "${Env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
+            -latest -prerelease -requires Microsoft.Component.MSBuild -property installationPath
+          $msbuild = Join-Path $vs 'MSBuild\Current\Bin\MSBuild.exe'
+          Write-Host "MSBuild path detected: $msbuild"
+          "msbuild=$msbuild" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf8 -Append
 
-    - name: Build Solution (Release)
-      shell: pwsh
-      run: |
-        Write-Host "Using MSBuild from: ${{ steps.find-msbuild.outputs.msbuild }}"
-        & "${{ steps.find-msbuild.outputs.msbuild }}" WindowTabs.sln /p:Configuration=Release /m
+      - name: Build Solution (Release)
+        shell: pwsh
+        run: |
+          Write-Host "Using MSBuild from: ${{ steps.find-msbuild.outputs.msbuild }}"
+          & "${{ steps.find-msbuild.outputs.msbuild }}" WindowTabs.sln /p:Configuration=Release /m
 
+      - name: Compile WXS → WIXOBJ
+        shell: pwsh
+        run: |
+          # 1. 先構建 WtProgram，讓 TargetDir 裡有文件
+          & "${{ steps.find-msbuild.outputs.msbuild }}" WtProgram\WtProgram.fsproj `
+            /p:Configuration=Release /t:Build
 
-    - name: Compile WXS → WIXOBJ
-      shell: pwsh
-      run: |
-        # 1. 先構建 WtProgram，讓 TargetDir 裡有文件
-        & "${{ steps.find-msbuild.outputs.msbuild }}" WtProgram\WtProgram.fsproj `
-          /p:Configuration=Release /t:Build
+          # 2. 計算出 WtProgram 的輸出目錄
+          $programDir = Join-Path $Env:GITHUB_WORKSPACE 'WtProgram\bin\Release\'
+          Write-Host "✔ WtProgram 輸出目錄： $programDir"
 
-        # 2. 計算出 WtProgram 的輸出目錄
-        $programDir = Join-Path $Env:GITHUB_WORKSPACE 'WtProgram\bin\Release\'
-        Write-Host "✔ WtProgram 輸出目錄： $programDir"
+          # 3. 編譯 WXS 並定義 TargetDir 變數
+          & 'C:\Program Files (x86)\WiX Toolset v3.14\bin\candle.exe' `
+            "-dWtProgram.TargetDir=$programDir" `
+            -ext WixUIExtension `
+            (Join-Path $Env:GITHUB_WORKSPACE 'WtSetup\WtSetup.wxs')
 
-        # 3. 編譯 WXS 並定義 TargetDir 變數
-        & 'C:\Program Files (x86)\WiX Toolset v3.14\bin\candle.exe' `
-          "-dWtProgram.TargetDir=$programDir" `
-          -ext WixUIExtension `
-          (Join-Path $Env:GITHUB_WORKSPACE 'WtSetup\WtSetup.wxs')
+      - name: Debug WtProgram directory
+        shell: powershell
+        run: |
+          Write-Host "Workspace = $Env:GITHUB_WORKSPACE"
+          Write-Host "Listing WtProgram folder contents:"
+          Get-ChildItem -Path (Join-Path $Env:GITHUB_WORKSPACE 'WtProgram') -Recurse | ForEach-Object {
+            Write-Host "  - $($_.FullName)"
+          }
 
+      - name: Copy Banner.bmp into WtSetup
+        shell: pwsh
+        run: |
+          $ws      = $Env:GITHUB_WORKSPACE
+          $srcBmp  = Join-Path $ws 'WtProgram\Resources\Banner.bmp'
+          $dstDir  = Join-Path $ws 'WtSetup'
 
-    - name: Debug WtProgram directory
-      shell: powershell
-      run: |
-        Write-Host "Workspace = $Env:GITHUB_WORKSPACE"
-        Write-Host "Listing WtProgram folder contents:"
-        Get-ChildItem -Path (Join-Path $Env:GITHUB_WORKSPACE 'WtProgram') -Recurse | ForEach-Object {
-          Write-Host "  - $($_.FullName)"
-        }
+          if (-not (Test-Path $srcBmp)) {
+            Write-Error "❌ 找不到 $srcBmp，請確認專案內有這張圖"
+            exit 1
+          }
 
+          Copy-Item -Path $srcBmp -Destination $dstDir -Force
+          Write-Host "✔ Banner.bmp 已複製到 $dstDir"
 
-    - name: Copy Banner.bmp into WtSetup
-      shell: pwsh
-      run: |
-        $ws      = $Env:GITHUB_WORKSPACE
-        $srcBmp  = Join-Path $ws 'WtProgram\Resources\Banner.bmp'
-        $dstDir  = Join-Path $ws 'WtSetup'
+      - name: Link WIXOBJ → MSI
+        shell: pwsh
+        run: |
+          # 進到 WtSetup 資料夾，讓 Banner.bmp 與 .ico 的相對路徑成立
+          $setupDir = Join-Path $Env:GITHUB_WORKSPACE 'WtSetup'
+          Push-Location $setupDir
 
-        if (-not (Test-Path $srcBmp)) {
-          Write-Error "❌ 找不到 $srcBmp，請確認專案內有這張圖"
-          exit 1
-        }
+          # 連結 .wixobj（這裡檔名就是 WtSetup.wixobj，因為 candle 會輸出在當前資料夾）
+          & 'C:\Program Files (x86)\WiX Toolset v3.14\bin\light.exe' `
+            -ext WixUIExtension `
+            -o (Join-Path $Env:GITHUB_WORKSPACE 'Installer\WindowTabs.msi') `
+            'WtSetup.wixobj'
 
-        Copy-Item -Path $srcBmp -Destination $dstDir -Force
-        Write-Host "✔ Banner.bmp 已複製到 $dstDir"
-
-
-    - name: Link WIXOBJ → MSI (auto-find)
-      shell: pwsh
-      run: |
-        # 1. 在 workspace 中遞迴列出所有 .wixobj，看看有哪些文件
-        Write-Host "🔍 搜尋 .wixobj 文件："
-        Get-ChildItem -Path $Env:GITHUB_WORKSPACE -Recurse -Filter *.wixobj |
-          ForEach-Object { Write-Host "  - " + $_.FullName }
-
-        # 2. 取第一個找到的 .wixobj
-        $wixObj = Get-ChildItem -Path $Env:GITHUB_WORKSPACE -Recurse -Filter *.wixobj |
-                  Select-Object -First 1
-
-        if (-not $wixObj) {
-          Write-Error "❌ 找不到任何 .wixobj，請確認 candle.exe 是否成功執行！"
-          exit 1
-        }
-
-        Write-Host "✔ 使用 .wixobj： $($wixObj.FullName)"
-
-        # 3. 調用 light.exe 生成 MSI
-        $outMsi = Join-Path $Env:GITHUB_WORKSPACE 'Installer\WindowTabs.msi'
-        & 'C:\Program Files (x86)\WiX Toolset v3.14\bin\light.exe' `
-          -ext WixUIExtension `
-          -o $outMsi `
-          $wixObj.FullName
-
-        Write-Host "✔ 已生成 MSI： $outMsi"
+          Pop-Location
 
 
-    - name: Upload Artifacts
-      uses: actions/upload-artifact@v4.6.2
-      with:
-        name: WindowTabs-Release
-        path: |
-          WtProgram\bin\Release\WindowTabs.exe
-          Installer\WindowTabs.msi
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: WindowTabs-Release
+          path: |
+            WtProgram\bin\Release\WindowTabs.exe
+            Installer\WindowTabs.msi
