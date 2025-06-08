@@ -69,16 +69,27 @@ jobs:
 
 
     - name: Copy WiX resources into WtSetup
-      shell: pwsh
+      shell: powershell
       run: |
-        $src = Join-Path $Env:GITHUB_WORKSPACE 'WtProgram\Resources'
-        $dst = Join-Path $Env:GITHUB_WORKSPACE 'WtSetup'
-        Copy-Item (Join-Path $src 'Bemo.ico') -Destination $dst -Force
-        Copy-Item (Join-Path $src 'Banner.bmp') -Destination $dst -Force
+        $workspace = $Env:GITHUB_WORKSPACE
+        $srcDir   = Join-Path $workspace 'WtProgram\Resources'
+        $dstDir   = Join-Path $workspace 'WtSetup'
 
-        Write-Host "✔ 已複製資源："
-        # Get-ChildItem -Path $dst -Include '*.ico','*.bmp' | ForEach-Object { Write-Host "  - $($_.Name)" }
-        Get-ChildItem -Path $dst -Include '*.ico','*.bmp' | ForEach-Object { Write-Host "  - " + $_.Name }
+        # 1. 遞迴列出 Resources 下所有檔案，確認路徑
+        Write-Host "🔍 WtProgram\\Resources contents:"
+        Get-ChildItem -Path $srcDir -Recurse | ForEach-Object {
+          Write-Host "  - $($_.FullName)"
+        }
+
+        # 2. 複製所有 .bmp 與 .ico 文件到 WtSetup
+        Copy-Item (Join-Path $srcDir '*.bmp') -Destination $dstDir -Force -Recurse
+        Copy-Item (Join-Path $srcDir '*.ico') -Destination $dstDir -Force -Recurse
+
+        # 3. 列出複製後的 WtSetup 資源，確認無誤
+        Write-Host "✔ WtSetup 裡的資源："
+        Get-ChildItem -Path $dstDir -Filter '*.bmp','*.ico' | ForEach-Object {
+          Write-Host "  - $($_.Name)"
+        }
 
 
     - name: Link WIXOBJ → MSI (auto-find)
